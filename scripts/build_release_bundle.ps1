@@ -1,5 +1,5 @@
 param(
-  [ValidateSet('launcher', 'demo', 'connected', 'all')]
+  [ValidateSet('launcher', 'demo', 'connected', 'background', 'all')]
   [string]$Mode = 'all',
   [switch]$Zip,
   [switch]$Clean
@@ -120,6 +120,31 @@ function Build-ReleaseVariant {
   Write-Host "$BuildName build is ready: $targetDir" -ForegroundColor Green
 }
 
+function Build-BackgroundVariant {
+  Write-Host "Building Background release..." -ForegroundColor Cyan
+
+  & "$projectRoot\scripts\build_background_exe.ps1"
+  if ($LASTEXITCODE -ne 0) {
+    throw "Background build failed"
+  }
+
+  $targetDir = Join-Path $distRoot 'background'
+  Write-BuildInfo -TargetDir $targetDir -BuildName 'Background' -EntryPoint 'background_service/src/main.py'
+
+  if ($Zip) {
+    New-Item -ItemType Directory -Force -Path $packagesRoot | Out-Null
+    $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+    $zipPath = Join-Path $packagesRoot "Navi-Background-release-$timestamp.zip"
+    if (Test-Path $zipPath) {
+      Remove-Item -LiteralPath $zipPath -Force
+    }
+    Compress-Archive -Path (Join-Path $targetDir '*') -DestinationPath $zipPath -CompressionLevel Optimal
+    Write-Host "Created package: $zipPath" -ForegroundColor Green
+  }
+
+  Write-Host "Background build is ready: $targetDir" -ForegroundColor Green
+}
+
 $variants = switch ($Mode) {
   'launcher' {
     @(@{ Name = 'Launcher'; Dist = 'launcher'; Entry = 'lib\main.dart' })
@@ -130,16 +155,25 @@ $variants = switch ($Mode) {
   'connected' {
     @(@{ Name = 'Connected'; Dist = 'connected'; Entry = 'lib\main_connected.dart' })
   }
+  'background' {
+    @(@{ Name = 'Background'; Dist = 'background'; Entry = 'background_service/src/main.py' })
+  }
   default {
     @(
       @{ Name = 'Launcher'; Dist = 'launcher'; Entry = 'lib\main.dart' },
       @{ Name = 'Demo'; Dist = 'demo'; Entry = 'lib\main_demo.dart' },
-      @{ Name = 'Connected'; Dist = 'connected'; Entry = 'lib\main_connected.dart' }
+      @{ Name = 'Connected'; Dist = 'connected'; Entry = 'lib\main_connected.dart' },
+      @{ Name = 'Background'; Dist = 'background'; Entry = 'background_service/src/main.py' }
     )
   }
 }
 
 foreach ($variant in $variants) {
+  if ($variant.Dist -eq 'background') {
+    Build-BackgroundVariant
+    continue
+  }
+
   Build-ReleaseVariant `
     -BuildName $variant.Name `
     -DistFolder $variant.Dist `

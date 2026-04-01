@@ -2,15 +2,13 @@ Set-Location $PSScriptRoot\..
 
 function Test-BackgroundRunning {
   try {
-    $processes = Get-CimInstance Win32_Process -ErrorAction Stop
+    $processes = Get-Process -Name 'Navi Background','pythonw','python' -ErrorAction SilentlyContinue
     foreach ($process in $processes) {
-      $commandLine = [string]$process.CommandLine
-      if ([string]::IsNullOrWhiteSpace($commandLine)) {
-        continue
-      }
-
-      if ($commandLine -match 'background_service[\\/]+src[\\/]+main\.py') {
-        return $true
+      try {
+        if ($process.ProcessName -eq 'Navi Background') {
+          return $true
+        }
+      } catch {
       }
     }
   } catch {

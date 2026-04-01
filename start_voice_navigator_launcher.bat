@@ -1,3 +1,3 @@
 @echo off
 cd /d "%~dp0"
-powershell -ExecutionPolicy Bypass -File ".\start_voice_navigator_launcher.ps1"
+wscript //nologo ".\scripts\launch_launcher_hidden.vbs"

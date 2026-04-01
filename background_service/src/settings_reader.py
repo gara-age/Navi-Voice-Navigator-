@@ -4,11 +4,12 @@ import json
 from pathlib import Path
 
 from config import BackgroundConfig
+from path_utils import resolve_project_root
 
 
 class SettingsReader:
     def __init__(self) -> None:
-        self.root = Path(__file__).resolve().parents[2]
+        self.root = resolve_project_root()
         self.settings_path = self.root / "runtime" / "settings.json"
 
     def load(self) -> BackgroundConfig:

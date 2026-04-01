@@ -3,6 +3,7 @@ from __future__ import annotations
 import ctypes
 import json
 import time
+from threading import Event
 from pathlib import Path
 from ctypes import wintypes
 
@@ -10,6 +11,7 @@ import events
 from app_monitor import AppMonitor
 from config import BackgroundConfig
 from event_dispatcher import EventDispatcher
+from path_utils import resolve_project_root
 from server_probe import ServerProbe
 from settings_reader import SettingsReader
 
@@ -34,7 +36,7 @@ class HotkeyManager:
         self.server_probe = server_probe or ServerProbe(config.server_base_url)
         self.app_monitor = AppMonitor()
         self.settings_reader = SettingsReader()
-        self.root = Path(__file__).resolve().parents[2]
+        self.root = resolve_project_root()
         self.runtime_dir = self.root / "runtime"
         self.event_file = self.runtime_dir / "background_event.json"
         self.ui_state_file = self.runtime_dir / "ui_state.json"
@@ -65,10 +67,10 @@ class HotkeyManager:
         else:
             print("Using polling-based global hotkey detection.")
 
-    def run_forever(self) -> None:
+    def run_forever(self, stop_event: Event | None = None) -> None:
         self.start()
         try:
-            while True:
+            while stop_event is None or not stop_event.is_set():
                 self._reload_settings_if_needed()
                 if self._register_supported:
                     suspended = self._are_hotkeys_suspended()

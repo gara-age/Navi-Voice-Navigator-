@@ -9,7 +9,9 @@ class WindowController:
         self.user32 = ctypes.windll.user32
 
     def restore_or_show(self) -> bool:
-        hwnd = self._find_window(["Voice Navigator", "voice_navigator"])
+        hwnd = self._find_window(
+            ["Navi: Voice Navigator", "Voice Navigator", "voice_navigator"]
+        )
         if hwnd is None:
             return False
 
@@ -18,7 +20,9 @@ class WindowController:
         return True
 
     def send_function_key(self, key_name: str) -> bool:
-        hwnd = self._find_window(["Voice Navigator", "voice_navigator"])
+        hwnd = self._find_window(
+            ["Navi: Voice Navigator", "Voice Navigator", "voice_navigator"]
+        )
         if hwnd is None:
             return False
 

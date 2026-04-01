@@ -1,5 +1,6 @@
 import ctypes
 
+from background_application import BackgroundApplication
 from config import BackgroundConfig
 from event_dispatcher import EventDispatcher
 from hotkey_manager import HotkeyManager
@@ -29,11 +30,9 @@ def main() -> None:
         return
 
     config = SettingsReader().load()
-    dispatcher = EventDispatcher(config)
-    server_probe = ServerProbe(config.server_base_url)
-    hotkeys = HotkeyManager(config, dispatcher, server_probe=server_probe)
-    bindings = hotkeys.describe_bindings()
-    server_ready = server_probe.is_server_ready()
+    app = BackgroundApplication(config)
+    bindings = app.hotkeys.describe_bindings()
+    server_ready = app.server_probe.is_server_ready()
 
     print("Voice Navigator background service starting...")
     print(f"Server target: {config.server_base_url}")
@@ -42,7 +41,7 @@ def main() -> None:
     print(f"Bindings: {bindings}")
     print("Global hotkeys are now active. Press Ctrl+C to stop.")
 
-    hotkeys.run_forever()
+    app.run()
 
 
 if __name__ == "__main__":

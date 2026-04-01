@@ -1,3 +1,3 @@
 @echo off
 cd /d "%~dp0"
-powershell -ExecutionPolicy Bypass -File ".\start_flutter_demo.ps1"
+start "" powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File ".\start_flutter_demo.ps1"

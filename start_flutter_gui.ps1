@@ -2,8 +2,6 @@ Set-Location $PSScriptRoot
 $env:VOICE_NAVIGATOR_ROOT = (Resolve-Path $PSScriptRoot).Path
 $exe = Join-Path $PSScriptRoot 'dist\launcher\voice_navigator.exe'
 
-powershell -ExecutionPolicy Bypass -File .\scripts\ensure_background_hidden.ps1
-
 function Get-LatestSourceWriteTime {
   $paths = @(
     (Join-Path $PSScriptRoot 'app_flutter\lib'),
@@ -36,11 +34,16 @@ if (Test-Path $exe) {
     exit 0
   }
 
-  Write-Host "Source files are newer than the launcher build. Launching current Flutter code..." -ForegroundColor Yellow
+  Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe)
+  exit 0
 }
 
 if (-not (Test-Path $exe)) {
-  Write-Host "No built launcher executable found. Launching current Flutter code..." -ForegroundColor Yellow
+  [System.Windows.MessageBox]::Show(
+    "빌드된 launcher 실행 파일을 찾을 수 없습니다.`n먼저 build_release_bundle.bat 또는 scripts\\build_flutter_launcher.ps1 를 실행해주세요.",
+    "Navi: Voice Navigator",
+    [System.Windows.MessageBoxButton]::OK,
+    [System.Windows.MessageBoxImage]::Information
+  ) | Out-Null
+  exit 1
 }
-
-powershell -ExecutionPolicy Bypass -File .\scripts\run_flutter.ps1
