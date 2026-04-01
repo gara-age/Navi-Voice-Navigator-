@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TaskPlan",
+  "type": "object",
+  "required": ["intent", "platform", "slots", "goal", "task_plan"],
+  "properties": {
+    "intent": {"type": "string"},
+    "platform": {"type": "string"},
+    "slots": {"type": "object"},
+    "goal": {"type": "string"},
+    "task_plan": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["step", "action"],
+        "properties": {
+          "step": {"type": "integer"},
+          "action": {"type": "string"},
+          "target": {"type": "string"},
+          "value": {"type": "string"},
+          "contains": {"type": "string"}
+        }
+      }
+    },
+    "risk_flags": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "requires_confirmation": {"type": "boolean"}
+  }
+}

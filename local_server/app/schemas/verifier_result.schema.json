@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VerifierResult",
+  "type": "object",
+  "required": ["step", "action", "status", "checks"],
+  "properties": {
+    "step": {"type": "integer"},
+    "action": {"type": "string"},
+    "status": {"type": "string"},
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "status"],
+        "properties": {
+          "type": {"type": "string"},
+          "status": {"type": "string"},
+          "expected": {"type": "string"},
+          "actual": {"type": "string"}
+        }
+      }
+    },
+    "fallback_used": {"type": "boolean"},
+    "error_code": {"type": "string"}
+  }
+}
