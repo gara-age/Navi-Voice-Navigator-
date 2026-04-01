@@ -2,6 +2,8 @@ Set-Location $PSScriptRoot
 $env:VOICE_NAVIGATOR_ROOT = (Resolve-Path $PSScriptRoot).Path
 $exe = Join-Path $PSScriptRoot 'dist\demo\voice_navigator.exe'
 
+powershell -ExecutionPolicy Bypass -File .\scripts\ensure_background_hidden.ps1
+
 function Get-LatestSourceWriteTime {
   $paths = @(
     (Join-Path $PSScriptRoot 'app_flutter\lib'),

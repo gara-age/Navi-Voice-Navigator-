@@ -4,6 +4,15 @@ if (Test-Path .\.venv-background) {
   Remove-Item .\.venv-background -Recurse -Force
 }
 
+function New-BackgroundExecutableAlias {
+  $sourceExe = '.\.venv-background\Scripts\pythonw.exe'
+  $targetExe = '.\.venv-background\Scripts\Navi Background.exe'
+
+  if (Test-Path $sourceExe) {
+    Copy-Item -LiteralPath $sourceExe -Destination $targetExe -Force
+  }
+}
+
 function Initialize-BackgroundEnv {
   param(
     [string]$Launcher,
@@ -26,6 +35,8 @@ function Initialize-BackgroundEnv {
     if ($LASTEXITCODE -ne 0) {
       throw "requirements install failed"
     }
+
+    New-BackgroundExecutableAlias
 
     Write-Host "Background environment ready: .venv-background ($Label)"
     exit 0
