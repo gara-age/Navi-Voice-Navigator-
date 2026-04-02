@@ -106,25 +106,17 @@ class _ModeLauncherPageState extends ConsumerState<ModeLauncherPage> {
       focusNode: _focusNode,
       autofocus: true,
       child: Scaffold(
+        backgroundColor: surfaceTheme.surface,
         body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1160),
-                child: Container(
-                  padding: const EdgeInsets.all(28),
-                  decoration: BoxDecoration(
-                    color: surfaceTheme.surface,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x33000000),
-                        blurRadius: 30,
-                        offset: Offset(0, 16),
-                      ),
-                    ],
-                  ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1160),
+              child: Container(
+                padding: const EdgeInsets.all(28),
+                decoration: BoxDecoration(
+                  color: surfaceTheme.surface,
+                  borderRadius: BorderRadius.circular(24),
+                ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -218,7 +210,6 @@ class _ModeLauncherPageState extends ConsumerState<ModeLauncherPage> {
                       ),
                     ],
                   ),
-                ),
               ),
             ),
           ),

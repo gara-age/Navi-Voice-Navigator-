@@ -508,7 +508,7 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
       focusNode: _focusNode,
       autofocus: true,
       child: Scaffold(
-        backgroundColor: surfaceTheme.shellBackground,
+        backgroundColor: surfaceTheme.surface,
         body: SafeArea(
           child: Stack(
             children: [

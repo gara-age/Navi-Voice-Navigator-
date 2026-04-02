@@ -90,6 +90,9 @@ class Win32Window {
 
   // Update the window frame's theme to match the system theme.
   static void UpdateTheme(HWND const window);
+  static void UpdateFrame(HWND const window);
+  RECT GetInsetsAwareClientArea();
+  LRESULT HitTestNCA(POINT cursor) noexcept;
 
   void MinimizeToTray();
   void RestoreFromTray();

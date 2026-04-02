@@ -3,6 +3,7 @@
 #include <dwmapi.h>
 #include <flutter_windows.h>
 #include <shlwapi.h>
+#include <windowsx.h>
 
 #include <filesystem>
 #include <fstream>
@@ -16,6 +17,14 @@ namespace {
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 #endif
 
+#ifndef DWMWA_WINDOW_CORNER_PREFERENCE
+#define DWMWA_WINDOW_CORNER_PREFERENCE 33
+#endif
+
+#ifndef DWMWCP_ROUND
+#define DWMWCP_ROUND 2
+#endif
+
 constexpr const wchar_t kWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
 constexpr const wchar_t kGetPreferredBrightnessRegKey[] =
     L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
@@ -26,6 +35,12 @@ constexpr const wchar_t kTrayMenuSettingsLabel[] =
     L"\xC124\xC815";
 constexpr const wchar_t kTrayMenuExitLabel[] =
     L"\xC885\xB8CC\xD558\xAE30";
+constexpr DWORD kBorderlessWindowStyle =
+    WS_POPUP | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU |
+    WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
+constexpr int kWindowBorderThickness = 1;
+constexpr int kResizeBorderThickness = 8;
+constexpr int kDragRegionHeight = 56;
 
 static int g_active_window_count = 0;
 constexpr UINT kTrayCallbackMessage = WM_APP + 1;
@@ -163,7 +178,8 @@ const wchar_t* WindowClassRegistrar::GetWindowClass() {
     window_class.hInstance = GetModuleHandle(nullptr);
     window_class.hIcon =
         LoadIcon(window_class.hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
-    window_class.hbrBackground = 0;
+    window_class.hbrBackground =
+        CreateSolidBrush(RGB(214, 223, 240));
     window_class.lpszMenuName = nullptr;
     window_class.lpfnWndProc = Win32Window::WndProc;
     RegisterClass(&window_class);
@@ -201,7 +217,7 @@ bool Win32Window::Create(const std::wstring& title,
   double scale_factor = dpi / 96.0;
 
   HWND window = CreateWindow(
-      window_class, title.c_str(), WS_OVERLAPPEDWINDOW,
+      window_class, title.c_str(), kBorderlessWindowStyle,
       Scale(origin.x, scale_factor), Scale(origin.y, scale_factor),
       Scale(size.width, scale_factor), Scale(size.height, scale_factor),
       nullptr, nullptr, GetModuleHandle(nullptr), this);
@@ -211,6 +227,7 @@ bool Win32Window::Create(const std::wstring& title,
   }
 
   UpdateTheme(window);
+  UpdateFrame(window);
 
   return OnCreate();
 }
@@ -269,8 +286,23 @@ LRESULT Win32Window::MessageHandler(HWND hwnd,
       return 0;
     }
 
+    case WM_NCCALCSIZE:
+      if (wparam == TRUE) {
+        return 0;
+      }
+      break;
+
+    case WM_NCHITTEST: {
+      POINT cursor = {GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};
+      const LRESULT hit = HitTestNCA(cursor);
+      if (hit != HTCLIENT) {
+        return hit;
+      }
+      break;
+    }
+
     case WM_SIZE: {
-      RECT rect = GetClientArea();
+      RECT rect = GetInsetsAwareClientArea();
       if (child_content_ != nullptr) {
         MoveWindow(child_content_, rect.left, rect.top, rect.right - rect.left,
                    rect.bottom - rect.top, TRUE);
@@ -342,7 +374,7 @@ Win32Window* Win32Window::GetThisFromHandle(HWND const window) noexcept {
 void Win32Window::SetChildContent(HWND content) {
   child_content_ = content;
   SetParent(content, window_handle_);
-  RECT frame = GetClientArea();
+  RECT frame = GetInsetsAwareClientArea();
 
   MoveWindow(content, frame.left, frame.top, frame.right - frame.left,
              frame.bottom - frame.top, TRUE);
@@ -383,6 +415,79 @@ void Win32Window::UpdateTheme(HWND const window) {
     DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE,
                           &enable_dark_mode, sizeof(enable_dark_mode));
   }
+}
+
+void Win32Window::UpdateFrame(HWND const window) {
+  const MARGINS margins = {1, 1, 1, 1};
+  DwmExtendFrameIntoClientArea(window, &margins);
+
+  const DWORD corner_preference = DWMWCP_ROUND;
+  DwmSetWindowAttribute(window, DWMWA_WINDOW_CORNER_PREFERENCE,
+                        &corner_preference, sizeof(corner_preference));
+}
+
+RECT Win32Window::GetInsetsAwareClientArea() {
+  RECT frame = GetClientArea();
+  const bool maximized = IsZoomed(window_handle_);
+  const int inset = maximized ? 0 : kWindowBorderThickness;
+  frame.left += inset;
+  frame.top += inset;
+  frame.right -= inset;
+  frame.bottom -= inset;
+  return frame;
+}
+
+LRESULT Win32Window::HitTestNCA(POINT cursor) noexcept {
+  if (!window_handle_) {
+    return HTNOWHERE;
+  }
+
+  RECT window_rect;
+  GetWindowRect(window_handle_, &window_rect);
+
+  const LONG x = cursor.x - window_rect.left;
+  const LONG y = cursor.y - window_rect.top;
+  const LONG width = window_rect.right - window_rect.left;
+  const LONG height = window_rect.bottom - window_rect.top;
+
+  const bool can_resize = !IsZoomed(window_handle_);
+  if (can_resize) {
+    const bool left = x >= 0 && x < kResizeBorderThickness;
+    const bool right = x <= width && x >= width - kResizeBorderThickness;
+    const bool top = y >= 0 && y < kResizeBorderThickness;
+    const bool bottom = y <= height && y >= height - kResizeBorderThickness;
+
+    if (top && left) {
+      return HTTOPLEFT;
+    }
+    if (top && right) {
+      return HTTOPRIGHT;
+    }
+    if (bottom && left) {
+      return HTBOTTOMLEFT;
+    }
+    if (bottom && right) {
+      return HTBOTTOMRIGHT;
+    }
+    if (left) {
+      return HTLEFT;
+    }
+    if (right) {
+      return HTRIGHT;
+    }
+    if (top) {
+      return HTTOP;
+    }
+    if (bottom) {
+      return HTBOTTOM;
+    }
+  }
+
+  if (y >= 0 && y < kDragRegionHeight) {
+    return HTCAPTION;
+  }
+
+  return HTCLIENT;
 }
 
 void Win32Window::MinimizeToTray() {

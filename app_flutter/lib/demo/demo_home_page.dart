@@ -369,24 +369,13 @@ class _DemoHomePageState extends State<DemoHomePage> {
           focusNode: _focusNode,
           autofocus: true,
           child: Scaffold(
+            backgroundColor: surfaceTheme.surface,
             body: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Stack(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: surfaceTheme.contentBackground,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x66000000),
-                            blurRadius: 60,
-                            offset: Offset(0, 20),
-                          ),
-                        ],
-                      ),
-                      clipBehavior: Clip.antiAlias,
+              child: Stack(
+                children: [
+                  Container(
+                    color: surfaceTheme.surface,
+                    clipBehavior: Clip.none,
                       child: Column(
                         children: [
                           const AppTitleBar(),
@@ -500,8 +489,8 @@ class _DemoHomePageState extends State<DemoHomePage> {
                           ),
                         ],
                       ),
-                    ),
-                    if (_showSettingsModal) ...[
+                  ),
+                  if (_showSettingsModal) ...[
                       Positioned.fill(
                         child: GestureDetector(
                           onTap: _closeSettings,
@@ -532,8 +521,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                         ),
                       ),
                     ],
-                  ],
-                ),
+                ],
               ),
             ),
           ),

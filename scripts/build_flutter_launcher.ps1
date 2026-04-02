@@ -11,9 +11,9 @@ if (-not (Test-Path $flutter) -and -not (Get-Command flutter -ErrorAction Silent
 }
 
 if (Test-Path $flutter) {
-  & $flutter build windows
+  & $flutter build windows -t lib\main_launcher.dart
 } else {
-  flutter build windows
+  flutter build windows -t lib\main_launcher.dart
 }
 
 $sourceDir = Join-Path (Get-Location) 'build\windows\x64\runner\Release'

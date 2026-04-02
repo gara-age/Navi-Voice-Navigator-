@@ -24,6 +24,41 @@ bool FlutterWindow::OnCreate() {
   if (!flutter_controller_->engine() || !flutter_controller_->view()) {
     return false;
   }
+
+  window_method_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(),
+          "navi/window_controls",
+          &flutter::StandardMethodCodec::GetInstance());
+
+  window_method_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
+                 result) {
+        if (call.method_name() == "startWindowDrag") {
+          ReleaseCapture();
+          SendMessage(GetHandle(), WM_NCLBUTTONDOWN, HTCAPTION, 0);
+          result->Success();
+          return;
+        }
+        if (call.method_name() == "minimizeWindow") {
+          ShowWindow(GetHandle(), SW_MINIMIZE);
+          result->Success();
+          return;
+        }
+        if (call.method_name() == "toggleMaximizeWindow") {
+          ShowWindow(GetHandle(), IsZoomed(GetHandle()) ? SW_RESTORE : SW_MAXIMIZE);
+          result->Success();
+          return;
+        }
+        if (call.method_name() == "closeWindow") {
+          SendMessage(GetHandle(), WM_CLOSE, 0, 0);
+          result->Success();
+          return;
+        }
+        result->NotImplemented();
+      });
+
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
@@ -41,6 +76,7 @@ bool FlutterWindow::OnCreate() {
 
 void FlutterWindow::OnDestroy() {
   if (flutter_controller_) {
+    window_method_channel_.reset();
     flutter_controller_ = nullptr;
   }
 
