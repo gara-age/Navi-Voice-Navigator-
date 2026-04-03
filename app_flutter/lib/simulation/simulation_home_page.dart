@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,7 +16,7 @@ import '../shared/services/taskbar_popup_service.dart';
 import '../shared/utils/shortcut_utils.dart';
 import 'services/simulation_runner_service.dart';
 
-enum SimulationScenario { naverMap, memo, windowsTheme }
+enum SimulationScenario { naverMap, memo, windowsTheme, kakaoTalk }
 
 class SimulationHomePage extends ConsumerStatefulWidget {
   const SimulationHomePage({super.key});
@@ -32,7 +32,7 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
   bool _isRunning = false;
   bool _showSettingsModal = false;
   String _statusLabel = '대기';
-  String _summary = '실행할 시나리오를 선택해주세요.';
+  String _summary = '시뮬레이션 시나리오를 선택한 뒤 실행해 주세요.';
   String _debugLog = '';
   List<Map<String, dynamic>> _steps = const [];
   SimulationScenario _selectedScenario = SimulationScenario.naverMap;
@@ -84,32 +84,25 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
       unawaited(_runScenario(_selectedScenario));
       return true;
     }
-
     if (ShortcutUtils.matches(event, shortcuts.screenRead)) {
       _copyLogs();
       return true;
     }
-
     if (ShortcutUtils.matches(event, shortcuts.openSettings)) {
       _openSettings();
       return true;
     }
-
     return false;
   }
 
   void _openSettings() {
-    if (_showSettingsModal) {
-      return;
-    }
+    if (_showSettingsModal) return;
     setState(() => _showSettingsModal = true);
     unawaited(LocalUiStateService.instance.setSettingsModalOpen(true));
   }
 
   void _closeSettings() {
-    if (!_showSettingsModal) {
-      return;
-    }
+    if (!_showSettingsModal) return;
     setState(() => _showSettingsModal = false);
     unawaited(LocalUiStateService.instance.setSettingsModalOpen(false));
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -120,13 +113,10 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
   }
 
   Future<void> _copyLogs() async {
-    if (_debugLog.trim().isEmpty) {
-      return;
-    }
+    if (_debugLog.trim().isEmpty) return;
     await Clipboard.setData(ClipboardData(text: _debugLog));
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
+
     final settings = ref.read(settingsControllerProvider);
     showAppToast(
       context,
@@ -138,12 +128,9 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
   }
 
   Future<void> _runScenario(SimulationScenario scenario) async {
-    if (_isRunning) {
-      return;
-    }
+    if (_isRunning) return;
 
     final settings = ref.read(settingsControllerProvider);
-    final scenarioLabel = _scenarioLabel(scenario);
     setState(() {
       _selectedScenario = scenario;
       _isRunning = true;
@@ -155,7 +142,7 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
 
     showAppToast(
       context,
-      '$scenarioLabel 시나리오를 시작합니다.',
+      '${_scenarioLabel(scenario)} 시나리오를 시작합니다.',
       title: '작업 처리 중',
       state: TaskbarPopupState.processing,
       displaySettings: settings.display,
@@ -164,9 +151,7 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
     final result = await _runSelectedScenario(
       scenario,
       onProgress: (event) {
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
         setState(() {
           _statusLabel = '실행 중';
           _summary = event.detail;
@@ -176,6 +161,7 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
             '[step ${event.step}] ${event.action}: ${event.detail}',
           ].where((line) => line.isNotEmpty).join('\n');
         });
+
         showDetailedPopup(
           context,
           title: '단계 ${event.step} 진행',
@@ -188,9 +174,7 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
       },
     );
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     setState(() {
       _isRunning = false;
@@ -235,17 +219,13 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
   }) {
     switch (scenario) {
       case SimulationScenario.naverMap:
-        return SimulationRunnerService.instance.runNaverMapScenario(
-          onProgress: onProgress,
-        );
+        return SimulationRunnerService.instance.runNaverMapScenario(onProgress: onProgress);
       case SimulationScenario.memo:
-        return SimulationRunnerService.instance.runMemoScenario(
-          onProgress: onProgress,
-        );
+        return SimulationRunnerService.instance.runMemoScenario(onProgress: onProgress);
       case SimulationScenario.windowsTheme:
-        return SimulationRunnerService.instance.runWindowsThemeScenario(
-          onProgress: onProgress,
-        );
+        return SimulationRunnerService.instance.runWindowsThemeScenario(onProgress: onProgress);
+      case SimulationScenario.kakaoTalk:
+        return SimulationRunnerService.instance.runKakaoTalkScenario(onProgress: onProgress);
     }
   }
 
@@ -257,6 +237,8 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
         return '메모장';
       case SimulationScenario.windowsTheme:
         return 'Windows 테마 변경';
+      case SimulationScenario.kakaoTalk:
+        return '카카오톡 메시지';
     }
   }
 
@@ -267,7 +249,9 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
       case SimulationScenario.memo:
         return '메모장 일기 저장';
       case SimulationScenario.windowsTheme:
-        return 'Windows 라이트 → 다크';
+        return 'Windows 라이트/다크 테마';
+      case SimulationScenario.kakaoTalk:
+        return '카카오톡 메시지 전송';
     }
   }
 
@@ -278,7 +262,9 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
       case SimulationScenario.memo:
         return '메모장에 일기 내용을 입력하고 저장하는 중입니다.';
       case SimulationScenario.windowsTheme:
-        return 'Windows 설정에서 화면 테마를 다크 모드로 변경하는 중입니다.';
+        return 'Windows 화면 테마를 전환하는 중입니다.';
+      case SimulationScenario.kakaoTalk:
+        return '카카오톡 창을 열고 메시지를 보내는 중입니다.';
     }
   }
 
@@ -286,39 +272,44 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
     switch (result.raw['scenario']) {
       case 'memo_notepad':
         return '메모장 시나리오가 완료되었습니다.';
-      case 'windows_theme_dark':
       case 'windows_theme_toggle':
+      case 'windows_theme_dark':
         final targetMode = (result.raw['target_mode'] as String?)?.trim();
-        if (targetMode == 'light') {
-          return 'Windows 라이트 테마로 변경했습니다.';
-        }
-        return 'Windows 다크 테마로 변경했습니다.';
+        return targetMode == 'light'
+            ? 'Windows 라이트 테마로 변경했습니다.'
+            : 'Windows 다크 테마로 변경했습니다.';
+      case 'kakaotalk_message':
+        return '카카오톡 메시지를 전송했습니다.';
     }
+
     final count = result.raw['result_count'];
-    if (count is int && count > 0) {
-      return '$count건의 결과가 조회되었습니다.';
-    }
+    if (count is int && count > 0) return '$count건의 결과가 조회되었습니다.';
     if (count is String && count.trim().isNotEmpty) {
       return '${count.trim()}건의 결과가 조회되었습니다.';
     }
     return '시나리오가 완료되었습니다.';
   }
+
   String _buildSuccessPopupMessage(SimulationRunnerResult result) {
     switch (result.raw['scenario']) {
       case 'memo_notepad':
         final fileName = (result.raw['file_name'] as String?)?.trim();
-        if (fileName != null && fileName.isNotEmpty) {
-          return '$fileName 이름으로 저장했습니다.';
-        }
-        return '메모장 파일 저장을 완료했습니다.';
-      case 'windows_theme_dark':
+        return (fileName != null && fileName.isNotEmpty)
+            ? '$fileName 이름으로 저장했습니다.'
+            : '메모장 파일 저장을 완료했습니다.';
       case 'windows_theme_toggle':
+      case 'windows_theme_dark':
         final targetMode = (result.raw['target_mode'] as String?)?.trim();
-        if (targetMode == 'light') {
-          return 'Windows 화면 모드를 라이트 테마로 변경했습니다.';
-        }
-        return 'Windows 화면 모드를 다크 테마로 변경했습니다.';
+        return targetMode == 'light'
+            ? 'Windows 화면 모드를 라이트 테마로 변경했습니다.'
+            : 'Windows 화면 모드를 다크 테마로 변경했습니다.';
+      case 'kakaotalk_message':
+        final recipient = (result.raw['recipient_name'] as String?)?.trim();
+        return (recipient != null && recipient.isNotEmpty)
+            ? '$recipient 대화방으로 메시지를 전송했습니다.'
+            : '카카오톡 대화방으로 메시지를 전송했습니다.';
     }
+
     final duration = (result.raw['duration_text'] as String?)?.trim();
     if (duration != null && duration.isNotEmpty) {
       return '$duration 소요되는 경로로 안내할까요?';
@@ -330,31 +321,28 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
     }
     return '결과를 읽어드립니다.';
   }
-  TaskbarPopupState _successPopupState(SimulationRunnerResult result) {
-    if (result.raw['scenario'] == 'windows_theme_dark' ||
-        result.raw['scenario'] == 'windows_theme_toggle') {
-      return TaskbarPopupState.themeDark;
-    }
-    return TaskbarPopupState.success;
-  }
-  String? _extractDurationFromText(String source) {
-    if (source.isEmpty) {
-      return null;
-    }
 
+  TaskbarPopupState _successPopupState(SimulationRunnerResult result) {
+    switch (result.raw['scenario']) {
+      case 'windows_theme_toggle':
+      case 'windows_theme_dark':
+        final targetMode = (result.raw['target_mode'] as String?)?.trim();
+        return targetMode == 'light' ? TaskbarPopupState.info : TaskbarPopupState.themeDark;
+      default:
+        return TaskbarPopupState.success;
+    }
+  }
+
+  String? _extractDurationFromText(String source) {
+    if (source.isEmpty) return null;
     final normalized = source.replaceAll('\n', ' ');
     final hourMatch = RegExp(r'(\d+)\s*시간').firstMatch(normalized);
     final minuteMatch = RegExp(r'(\d+)\s*분').firstMatch(normalized);
-
     if (hourMatch != null && minuteMatch != null) {
       return '${hourMatch.group(1)}시간 ${minuteMatch.group(1)}분';
     }
-    if (hourMatch != null) {
-      return '${hourMatch.group(1)}시간';
-    }
-    if (minuteMatch != null) {
-      return '${minuteMatch.group(1)}분';
-    }
+    if (hourMatch != null) return '${hourMatch.group(1)}시간';
+    if (minuteMatch != null) return '${minuteMatch.group(1)}분';
     return null;
   }
 
@@ -381,10 +369,7 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
     }
   }
 
-  List<Map<String, dynamic>> _upsertStep(
-    List<Map<String, dynamic>> current,
-    Map<String, dynamic> next,
-  ) {
+  List<Map<String, dynamic>> _upsertStep(List<Map<String, dynamic>> current, Map<String, dynamic> next) {
     final items = [...current];
     final index = items.indexWhere((item) => item['step'] == next['step']);
     if (index == -1) {
@@ -397,9 +382,7 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_stepScrollController.hasClients) {
-        return;
-      }
+      if (!_stepScrollController.hasClients) return;
       _stepScrollController.animateTo(
         _stepScrollController.position.maxScrollExtent,
         duration: const Duration(milliseconds: 200),
@@ -419,11 +402,7 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
       ),
       child: Text(
         '아직 실행된 단계가 없습니다.',
-        style: TextStyle(
-          fontFamily: 'Pretendard',
-          fontSize: 13,
-          color: surfaceTheme.textMuted,
-        ),
+        style: TextStyle(fontFamily: 'Pretendard', fontSize: 13, color: surfaceTheme.textMuted),
       ),
     );
   }
@@ -433,8 +412,7 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
     final status = (step['status'] as String? ?? 'pending').toLowerCase();
     final isError = status == 'error';
     final accent = isError ? AppColors.error : AppColors.accent;
-    final background =
-        isError ? AppColors.errorSoft : surfaceTheme.contentBackground;
+    final background = isError ? AppColors.errorSoft : surfaceTheme.contentBackground;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -442,9 +420,7 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isError ? const Color(0x66EF4444) : surfaceTheme.border,
-        ),
+        border: Border.all(color: isError ? const Color(0x66EF4444) : surfaceTheme.border),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -459,12 +435,7 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
             alignment: Alignment.center,
             child: Text(
               '${step['step'] ?? '-'}',
-              style: TextStyle(
-                fontFamily: 'Pretendard',
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: accent,
-              ),
+              style: TextStyle(fontFamily: 'Pretendard', fontSize: 13, fontWeight: FontWeight.w700, color: accent),
             ),
           ),
           const SizedBox(width: 12),
@@ -474,22 +445,12 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
               children: [
                 SelectableText(
                   (step['action'] as String? ?? 'step'),
-                  style: TextStyle(
-                    fontFamily: 'Pretendard',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: surfaceTheme.textPrimary,
-                  ),
+                  style: TextStyle(fontFamily: 'Pretendard', fontSize: 15, fontWeight: FontWeight.w700, color: surfaceTheme.textPrimary),
                 ),
                 const SizedBox(height: 6),
                 SelectableText(
                   (step['detail'] as String? ?? '').trim(),
-                  style: TextStyle(
-                    fontFamily: 'Pretendard',
-                    fontSize: 13,
-                    height: 1.6,
-                    color: surfaceTheme.textMuted,
-                  ),
+                  style: TextStyle(fontFamily: 'Pretendard', fontSize: 13, height: 1.6, color: surfaceTheme.textMuted),
                 ),
               ],
             ),
@@ -519,10 +480,7 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
                     height: 90,
                     decoration: BoxDecoration(
                       color: surfaceTheme.surface,
-                      border: Border(
-                        top: BorderSide(color: surfaceTheme.border),
-                        bottom: BorderSide(color: surfaceTheme.border),
-                      ),
+                      border: Border(top: BorderSide(color: surfaceTheme.border), bottom: BorderSide(color: surfaceTheme.border)),
                     ),
                     child: Row(
                       children: [
@@ -535,34 +493,28 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
                             iconColor: AppColors.success,
                           ),
                         ),
-                        VerticalDivider(
-                          width: 1,
-                          thickness: 1,
-                          color: surfaceTheme.border,
-                        ),
+                        VerticalDivider(width: 1, thickness: 1, color: surfaceTheme.border),
                         Expanded(
                           child: StatusCard(
                             label: '현재 시나리오',
                             value: _scenarioStatusLabel(_selectedScenario),
                             icon: switch (_selectedScenario) {
-                              SimulationScenario.naverMap =>
-                                Icons.train_rounded,
+                              SimulationScenario.naverMap => Icons.train_rounded,
                               SimulationScenario.memo => Icons.note_alt_rounded,
-                              SimulationScenario.windowsTheme =>
-                                Icons.dark_mode_rounded,
+                              SimulationScenario.windowsTheme => Icons.dark_mode_rounded,
+                              SimulationScenario.kakaoTalk => Icons.chat_bubble_rounded,
                             },
                             iconBackground: switch (_selectedScenario) {
-                              SimulationScenario.naverMap =>
-                                AppColors.accentSoft,
+                              SimulationScenario.naverMap => AppColors.accentSoft,
                               SimulationScenario.memo => AppColors.warningSoft,
-                              SimulationScenario.windowsTheme =>
-                                const Color(0xFFEDE9FE),
+                              SimulationScenario.windowsTheme => const Color(0xFFEDE9FE),
+                              SimulationScenario.kakaoTalk => const Color(0xFFE8FFF1),
                             },
                             iconColor: switch (_selectedScenario) {
                               SimulationScenario.naverMap => AppColors.accent,
                               SimulationScenario.memo => AppColors.warning,
-                              SimulationScenario.windowsTheme =>
-                                const Color(0xFF7C3AED),
+                              SimulationScenario.windowsTheme => const Color(0xFF7C3AED),
+                              SimulationScenario.kakaoTalk => const Color(0xFF16A34A),
                             },
                             showDot: true,
                           ),
@@ -580,114 +532,29 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Text(
-                                '시뮬레이션 시나리오',
-                                style: TextStyle(
-                                  fontFamily: 'Pretendard',
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: surfaceTheme.textMuted,
-                                ),
-                              ),
+                              Text('시뮬레이션 시나리오', style: TextStyle(fontFamily: 'Pretendard', fontSize: 12, fontWeight: FontWeight.w600, color: surfaceTheme.textMuted)),
                               const SizedBox(height: 8),
-                              _SimulationActionButton(
-                                icon: Icons.route_rounded,
-                                title: '네이버 지도 시나리오',
-                                description:
-                                    '네이버 지도에서 지하철 경로를 조회하는 자동화 시나리오입니다.',
-                                shortcut: ShortcutUtils.displayLabel(
-                                  settings.shortcuts.listenToggle,
-                                ),
-                                onTap: () => _runScenario(
-                                  SimulationScenario.naverMap,
-                                ),
-                                active: _selectedScenario ==
-                                    SimulationScenario.naverMap,
-                                running: _isRunning &&
-                                    _selectedScenario ==
-                                        SimulationScenario.naverMap,
-                              ),
+                              _SimulationActionButton(icon: Icons.route_rounded, title: '네이버 지도 시나리오', description: '네이버 지도에서 지하철 경로를 조회하는 자동화 시나리오입니다.', shortcut: ShortcutUtils.displayLabel(settings.shortcuts.listenToggle), onTap: () => _runScenario(SimulationScenario.naverMap), active: _selectedScenario == SimulationScenario.naverMap, running: _isRunning && _selectedScenario == SimulationScenario.naverMap),
                               const SizedBox(height: 8),
-                              _SimulationActionButton(
-                                icon: Icons.note_alt_rounded,
-                                title: '메모장 시나리오',
-                                description:
-                                    '메모장에 일기 내용을 입력하고 현재 날짜 이름으로 저장합니다.',
-                                shortcut: '메모',
-                                onTap: () => _runScenario(SimulationScenario.memo),
-                                active:
-                                    _selectedScenario == SimulationScenario.memo,
-                                running: _isRunning &&
-                                    _selectedScenario == SimulationScenario.memo,
-                              ),
+                              _SimulationActionButton(icon: Icons.note_alt_rounded, title: '메모장 시나리오', description: '메모장에 일기 내용을 입력하고 현재 날짜 이름으로 저장합니다.', shortcut: '메모', onTap: () => _runScenario(SimulationScenario.memo), active: _selectedScenario == SimulationScenario.memo, running: _isRunning && _selectedScenario == SimulationScenario.memo),
                               const SizedBox(height: 8),
-                              _SimulationActionButton(
-                                icon: Icons.dark_mode_rounded,
-                                title: 'Windows 테마 변경',
-                                description:
-                                    'Windows 설정을 열고 화면 모드를 라이트에서 다크 테마로 변경합니다.',
-                                shortcut: '테마',
-                                onTap: () => _runScenario(
-                                  SimulationScenario.windowsTheme,
-                                ),
-                                active: _selectedScenario ==
-                                    SimulationScenario.windowsTheme,
-                                running: _isRunning &&
-                                    _selectedScenario ==
-                                        SimulationScenario.windowsTheme,
-                              ),
+                              _SimulationActionButton(icon: Icons.dark_mode_rounded, title: 'Windows 테마 변경', description: 'Windows 설정을 열고 화면 테마를 라이트와 다크 사이에서 전환합니다.', shortcut: '테마', onTap: () => _runScenario(SimulationScenario.windowsTheme), active: _selectedScenario == SimulationScenario.windowsTheme, running: _isRunning && _selectedScenario == SimulationScenario.windowsTheme),
                               const SizedBox(height: 8),
-                              _SimulationActionButton(
-                                icon: Icons.copy_rounded,
-                                title: '로그 복사',
-                                description:
-                                    '현재 실행 로그를 클립보드로 복사합니다.',
-                                shortcut: ShortcutUtils.displayLabel(
-                                  settings.shortcuts.screenRead,
-                                ),
-                                onTap: _copyLogs,
-                              ),
+                              _SimulationActionButton(icon: Icons.chat_bubble_rounded, title: '카카오톡 메시지 시나리오', description: '로그인된 카카오톡에서 나와의 채팅을 검색하고 메시지를 전송합니다.', shortcut: '카톡', onTap: () => _runScenario(SimulationScenario.kakaoTalk), active: _selectedScenario == SimulationScenario.kakaoTalk, running: _isRunning && _selectedScenario == SimulationScenario.kakaoTalk),
                               const SizedBox(height: 8),
-                              _SimulationActionButton(
-                                icon: Icons.settings_rounded,
-                                title: '설정',
-                                description:
-                                    '시뮬레이션과 앱 전반 설정을 확인합니다.',
-                                shortcut: ShortcutUtils.displayLabel(
-                                  settings.shortcuts.openSettings,
-                                ),
-                                onTap: _openSettings,
-                              ),
+                              _SimulationActionButton(icon: Icons.copy_rounded, title: '로그 복사', description: '현재 실행 로그를 클립보드로 복사합니다.', shortcut: ShortcutUtils.displayLabel(settings.shortcuts.screenRead), onTap: _copyLogs),
+                              const SizedBox(height: 8),
+                              _SimulationActionButton(icon: Icons.settings_rounded, title: '설정', description: '시뮬레이션과 앱 공통 설정을 확인합니다.', shortcut: ShortcutUtils.displayLabel(settings.shortcuts.openSettings), onTap: _openSettings),
                               const SizedBox(height: 16),
                               Divider(color: surfaceTheme.border),
                               const SizedBox(height: 16),
-                              Text(
-                                '안내',
-                                style: TextStyle(
-                                  fontFamily: 'Pretendard',
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: surfaceTheme.textMuted,
-                                ),
-                              ),
+                              Text('안내', style: TextStyle(fontFamily: 'Pretendard', fontSize: 12, fontWeight: FontWeight.w600, color: surfaceTheme.textMuted)),
                               const SizedBox(height: 8),
-                              Text(
-                                '네이버 지도, 메모장, Windows 테마 변경 시나리오는 각각 독립적으로 실행됩니다.',
-                                style: TextStyle(
-                                  fontFamily: 'Pretendard',
-                                  fontSize: 12,
-                                  height: 1.6,
-                                  color: surfaceTheme.textMuted,
-                                ),
-                              ),
+                              Text('각 시나리오는 독립적으로 실행되며, 진행 로그와 결과를 오른쪽 패널에서 확인할 수 있습니다.', style: TextStyle(fontFamily: 'Pretendard', fontSize: 12, height: 1.6, color: surfaceTheme.textMuted)),
                             ],
                           ),
                         ),
-                        VerticalDivider(
-                          width: 1,
-                          thickness: 1,
-                          color: surfaceTheme.border,
-                        ),
+                        VerticalDivider(width: 1, thickness: 1, color: surfaceTheme.border),
                         Expanded(
                           child: Container(
                             color: surfaceTheme.surface,
@@ -699,20 +566,9 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
                                 const SizedBox(height: 16),
                                 _LogCard(log: _debugLog, onCopy: _copyLogs),
                                 const SizedBox(height: 16),
-                                Text(
-                                  '실행 단계',
-                                  style: TextStyle(
-                                    fontFamily: 'Pretendard',
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: surfaceTheme.textPrimary,
-                                  ),
-                                ),
+                                Text('실행 단계', style: TextStyle(fontFamily: 'Pretendard', fontSize: 16, fontWeight: FontWeight.w700, color: surfaceTheme.textPrimary)),
                                 const SizedBox(height: 12),
-                                if (_steps.isEmpty)
-                                  _buildEmptyStepCard(context)
-                                else
-                                  ..._steps.map(_buildStepCard),
+                                if (_steps.isEmpty) _buildEmptyStepCard(context) else ..._steps.map(_buildStepCard),
                               ],
                             ),
                           ),
@@ -731,10 +587,7 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
                       child: Center(
                         child: InkWell(
                           onTap: () {},
-                          child: SettingsModal(
-                            onClose: _closeSettings,
-                            onSaved: (_) => _closeSettings(),
-                          ),
+                          child: SettingsModal(onClose: _closeSettings, onSaved: (_) => _closeSettings()),
                         ),
                       ),
                     ),
@@ -749,15 +602,7 @@ class _SimulationHomePageState extends ConsumerState<SimulationHomePage> {
 }
 
 class _SimulationActionButton extends StatelessWidget {
-  const _SimulationActionButton({
-    required this.icon,
-    required this.title,
-    required this.description,
-    required this.shortcut,
-    required this.onTap,
-    this.active = false,
-    this.running = false,
-  });
+  const _SimulationActionButton({required this.icon, required this.title, required this.description, required this.shortcut, required this.onTap, this.active = false, this.running = false});
 
   final IconData icon;
   final String title;
@@ -770,72 +615,33 @@ class _SimulationActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final surfaceTheme = Theme.of(context).extension<AppSurfaceTheme>()!;
-
     return OutlinedButton(
       onPressed: onTap,
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        side: BorderSide(
-          color: active ? const Color(0x662563EB) : surfaceTheme.border,
-        ),
+        side: BorderSide(color: active ? const Color(0x662563EB) : surfaceTheme.border),
         backgroundColor: active ? AppColors.accentSoft : surfaceTheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       child: Row(
         children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: surfaceTheme.contentBackground,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, size: 20, color: surfaceTheme.textMuted),
-          ),
+          Container(width: 38, height: 38, decoration: BoxDecoration(color: surfaceTheme.contentBackground, borderRadius: BorderRadius.circular(10)), child: Icon(icon, size: 20, color: surfaceTheme.textMuted)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontFamily: 'Pretendard',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: surfaceTheme.textPrimary,
-                  ),
-                ),
+                Text(title, style: TextStyle(fontFamily: 'Pretendard', fontSize: 14, fontWeight: FontWeight.w700, color: surfaceTheme.textPrimary)),
                 const SizedBox(height: 2),
-                Text(
-                  running ? '현재 실행 중입니다.' : description,
-                  style: TextStyle(
-                    fontFamily: 'Pretendard',
-                    fontSize: 11,
-                    height: 1.4,
-                    color: surfaceTheme.textMuted,
-                  ),
-                ),
+                Text(running ? '현재 실행 중입니다.' : description, style: TextStyle(fontFamily: 'Pretendard', fontSize: 11, height: 1.4, color: surfaceTheme.textMuted)),
               ],
             ),
           ),
           if (shortcut != '미설정')
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: surfaceTheme.contentBackground,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: surfaceTheme.border),
-              ),
-              child: Text(
-                shortcut,
-                style: TextStyle(
-                  fontFamily: 'Pretendard',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: surfaceTheme.textMuted,
-                ),
-              ),
+              decoration: BoxDecoration(color: surfaceTheme.contentBackground, borderRadius: BorderRadius.circular(6), border: Border.all(color: surfaceTheme.border)),
+              child: Text(shortcut, style: TextStyle(fontFamily: 'Pretendard', fontSize: 11, fontWeight: FontWeight.w600, color: surfaceTheme.textMuted)),
             ),
         ],
       ),
@@ -853,33 +659,13 @@ class _SummaryCard extends StatelessWidget {
     final surfaceTheme = Theme.of(context).extension<AppSurfaceTheme>()!;
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: surfaceTheme.contentBackground,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: surfaceTheme.border),
-      ),
+      decoration: BoxDecoration(color: surfaceTheme.contentBackground, borderRadius: BorderRadius.circular(18), border: Border.all(color: surfaceTheme.border)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '실행 결과',
-            style: TextStyle(
-              fontFamily: 'Pretendard',
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: surfaceTheme.textPrimary,
-            ),
-          ),
+          Text('실행 결과', style: TextStyle(fontFamily: 'Pretendard', fontSize: 16, fontWeight: FontWeight.w700, color: surfaceTheme.textPrimary)),
           const SizedBox(height: 10),
-          SelectableText(
-            summary,
-            style: TextStyle(
-              fontFamily: 'Pretendard',
-              fontSize: 14,
-              height: 1.6,
-              color: surfaceTheme.textPrimary,
-            ),
-          ),
+          SelectableText(summary, style: TextStyle(fontFamily: 'Pretendard', fontSize: 14, height: 1.6, color: surfaceTheme.textPrimary)),
         ],
       ),
     );
@@ -887,10 +673,7 @@ class _SummaryCard extends StatelessWidget {
 }
 
 class _LogCard extends StatelessWidget {
-  const _LogCard({
-    required this.log,
-    required this.onCopy,
-  });
+  const _LogCard({required this.log, required this.onCopy});
 
   final String log;
   final VoidCallback onCopy;
@@ -900,30 +683,15 @@ class _LogCard extends StatelessWidget {
     final surfaceTheme = Theme.of(context).extension<AppSurfaceTheme>()!;
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: surfaceTheme.contentBackground,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: surfaceTheme.border),
-      ),
+      decoration: BoxDecoration(color: surfaceTheme.contentBackground, borderRadius: BorderRadius.circular(18), border: Border.all(color: surfaceTheme.border)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text(
-                '로그',
-                style: TextStyle(
-                  fontFamily: 'Pretendard',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: surfaceTheme.textPrimary,
-                ),
-              ),
+              Text('로그', style: TextStyle(fontFamily: 'Pretendard', fontSize: 16, fontWeight: FontWeight.w700, color: surfaceTheme.textPrimary)),
               const Spacer(),
-              TextButton(
-                onPressed: onCopy,
-                child: const Text('복사'),
-              ),
+              TextButton(onPressed: onCopy, child: const Text('복사')),
             ],
           ),
           const SizedBox(height: 10),
@@ -931,21 +699,9 @@ class _LogCard extends StatelessWidget {
             width: double.infinity,
             constraints: const BoxConstraints(minHeight: 64, maxHeight: 112),
             padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: surfaceTheme.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: surfaceTheme.border),
-            ),
+            decoration: BoxDecoration(color: surfaceTheme.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: surfaceTheme.border)),
             child: SingleChildScrollView(
-              child: SelectableText(
-                log.trim().isEmpty ? '아직 기록된 로그가 없습니다.' : log.trim(),
-                style: TextStyle(
-                  fontFamily: 'Pretendard',
-                  fontSize: 12,
-                  height: 1.5,
-                  color: surfaceTheme.textPrimary,
-                ),
-              ),
+              child: SelectableText(log.trim().isEmpty ? '아직 기록된 로그가 없습니다.' : log.trim(), style: TextStyle(fontFamily: 'Pretendard', fontSize: 12, height: 1.5, color: surfaceTheme.textPrimary)),
             ),
           ),
         ],

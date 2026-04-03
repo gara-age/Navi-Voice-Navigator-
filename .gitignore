@@ -12,6 +12,8 @@ __pycache__/
 .venv-background/
 venv/
 env/
+.Mac Os Flutter/
+.Mac_Os_Flutter/
 app_flutter/.flutter-plugins
 app_flutter/.flutter-plugins-dependencies
 app_flutter/.packages
@@ -21,3 +23,12 @@ runtime/tts/
 runtime/background_event.json
 runtime/ui_state.json
 runtime/settings.json
+@AutomationLog.txt
+ForFrontend/
+HTML_UI/
+Mac Os Flutter/
+forFrontEndDev/
+forFrontEndDev.zip
+run_forfrontend.bat
+scripts/build_forfrontend.ps1
+scripts/recreate_forfrontend.ps1

@@ -99,6 +99,17 @@ class SimulationRunnerService {
     );
   }
 
+  Future<SimulationRunnerResult> runKakaoTalkScenario({
+    void Function(SimulationProgressEvent event)? onProgress,
+  }) {
+    return _runScenarioModule(
+      moduleName: 'local_server.app.simulation.kakaotalk_message_scenario',
+      fallbackSummary:
+          '\uce74\uce74\uc624\ud1a1 \uba54\uc2dc\uc9c0 \uc2dc\ub098\ub9ac\uc624\ub97c \uc644\ub8cc\ud588\uc2b5\ub2c8\ub2e4.',
+      onProgress: onProgress,
+    );
+  }
+
   Future<SimulationRunnerResult> _runScenarioModule({
     required String moduleName,
     required String fallbackSummary,
